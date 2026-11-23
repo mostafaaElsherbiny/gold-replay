@@ -1,0 +1,18 @@
+{
+  "name": "gold-replay",
+  "version": "1.0.0",
+  "description": "Bar-by-bar replay of XAUUSD with a practice trading panel",
+  "scripts": {
+    "fetch": "node scripts/fetch-data.mjs",
+    "start": "node server.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dukascopy-node": "^1.51.1",
+    "lightweight-charts": "^5.3.0"
+  },
+  "type": "module"
+}

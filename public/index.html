@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gold Replay</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='4' y='10' width='6' height='14' rx='1' fill='%23e3b341'/><rect x='13' y='4' width='6' height='20' rx='1' fill='%23e3b341'/><rect x='22' y='13' width='6' height='9' rx='1' fill='%23e3b341'/></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <span class="dot"></span><strong>XAUUSD</strong>
+        <span class="muted" id="source">Gold spot</span>
+    </div>
+    <nav class="tfs" id="tfs" aria-label="Timeframe"></nav>
+    <nav class="tfs" id="chartTypes" aria-label="Chart type">
+        <button data-type="candles" title="Regular candles (A toggles)">Candles</button>
+        <button data-type="ha" title="Heikin Ashi candles (A toggles). Trades still fill at real prices.">Heikin Ashi</button>
+    </nav>
+    <div class="tools">
+        <button class="chip" id="hlineBtn" title="Horizontal line (H). Drag a line to move it, double-click it to delete.">
+            <svg viewBox="0 0 16 16"><path d="M1 8h14" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg><span class="label">Line</span>
+        </button>
+        <button class="chip" id="fibBtn" title="Fibonacci retracement (F): click the first point, then the second. Drag a dot to adjust it, drag a level to move it, double-click a level to delete it.">
+            <svg viewBox="0 0 16 16"><path d="M1 2.5h14M1 6h14M1 9h14M1 13.5h14" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 13.5 13.5 2.5" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 1.6"/></svg><span class="label">Fib</span>
+        </button>
+        <button class="chip icon-only" id="fibSettingsBtn" title="Fibonacci settings" aria-label="Fibonacci settings">
+            <svg viewBox="0 0 16 16"><path d="M8 5.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Zm6.3 3.6-1.4.4-.4 1 .7 1.3-1.3 1.3-1.3-.7-1 .4-.4 1.4H7.2l-.4-1.4-1-.4-1.3.7-1.3-1.3.7-1.3-.4-1-1.4-.4V7.2l1.4-.4.4-1-.7-1.3 1.3-1.3 1.3.7 1-.4.4-1.4h1.8l.4 1.4 1 .4 1.3-.7 1.3 1.3-.7 1.3.4 1 1.4.4Z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="chip" id="clearLinesBtn" title="Delete all horizontal lines and Fibonacci drawings">Clear</button>
+        <span class="sep"></span>
+        <span id="indicatorChips"></span>
+        <span class="sep"></span>
+        <select id="tzSelect" title="Time zone"></select>
+    </div>
+</header>
+
+<main class="layout">
+    <section class="chart-area">
+        <div class="legend" id="legend"></div>
+        <div id="chart"><div class="select-shade" id="selectShade" hidden></div></div>
+
+        <div class="start-card" id="startCard" hidden>
+            <button class="close" id="startCardClose" aria-label="Dismiss">×</button>
+            <h2>Where should the replay start?</h2>
+            <p>The chart hides every bar after the start point, then reveals them one at a time.</p>
+            <div class="start-actions">
+                <button class="btn primary" data-act="select">Select a bar on the chart</button>
+                <button class="btn" data-act="random">Random start</button>
+            </div>
+            <p class="muted small">Or pick a date and time in the bar below.</p>
+        </div>
+
+        <div class="replay-bar">
+            <div class="clock" title="Close time of the last revealed bar">
+                <span class="badge" id="modeBadge">REPLAY</span>
+                <span id="clock">—</span>
+            </div>
+            <div class="group">
+                <button class="icon-btn" id="selectBtn" title="Select the start bar on the chart">
+                    <svg viewBox="0 0 16 16"><path d="M8 1v14M3 5l-2 3 2 3M13 5l2 3-2 3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+                <button class="icon-btn" id="randomBtn" title="Random start (R)">
+                    <svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="5.5" cy="5.5" r="1.1" fill="currentColor"/><circle cx="10.5" cy="10.5" r="1.1" fill="currentColor"/><circle cx="8" cy="8" r="1.1" fill="currentColor"/></svg>
+                </button>
+                <input type="datetime-local" id="jumpInput" title="Jump to a date and time (in the selected time zone)">
+                <button class="btn small" id="jumpBtn">Go</button>
+            </div>
+            <div class="group transport">
+                <button class="icon-btn" id="backBtn" title="Step back (←)">
+                    <svg viewBox="0 0 16 16"><path d="M4 3v10M13 3 6 8l7 5z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                </button>
+                <button class="icon-btn play" id="playBtn" title="Play / pause (Space)">
+                    <svg viewBox="0 0 16 16" id="playIcon"><path d="M4 2.5v11l9.5-5.5z" fill="currentColor"/></svg>
+                </button>
+                <button class="icon-btn" id="fwdBtn" title="Step forward (→)">
+                    <svg viewBox="0 0 16 16"><path d="M12 3v10M3 3l7 5-7 5z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+            <div class="group">
+                <label class="field">Speed
+                    <select id="speedSelect">
+                        <option value="1">1/s</option><option value="2">2/s</option><option value="3">3/s</option>
+                        <option value="5">5/s</option><option value="10">10/s</option><option value="20">20/s</option><option value="50">50/s</option>
+                    </select>
+                </label>
+                <label class="field" title="What one step reveals">Step
+                    <select id="unitSelect">
+                        <option value="bar">1 bar</option>
+                        <option value="minute">1 minute</option>
+                    </select>
+                </label>
+                <button class="btn small" id="endBtn" title="Reveal everything up to the latest bar">Go to end</button>
+            </div>
+        </div>
+    </section>
+
+    <aside class="panel">
+        <section class="card account">
+            <div class="kv"><span>Balance</span><strong id="balance">—</strong></div>
+            <div class="kv"><span>Equity</span><strong id="equity">—</strong></div>
+            <div class="kv"><span>Open P&amp;L</span><strong id="openPnl">—</strong></div>
+        </section>
+
+        <section class="card">
+            <div class="order-grid">
+                <label>Lots <input type="number" id="lotsInput" min="0.01" step="0.01"></label>
+                <label>Spread $ <input type="number" id="spreadInput" min="0" step="0.01"></label>
+                <label>Stop loss $ <input type="number" id="slInput" min="0" step="0.5" title="Distance from entry in dollars. 0 = no stop."></label>
+                <label>Take profit $ <input type="number" id="tpInput" min="0" step="0.5" title="Distance from entry in dollars. 0 = no target."></label>
+            </div>
+            <p class="muted small" id="riskLine"></p>
+            <div class="trade-btns">
+                <button class="trade sell" id="sellBtn"><span>SELL</span><strong id="bidPx">—</strong></button>
+                <button class="trade buy" id="buyBtn"><span>BUY</span><strong id="askPx">—</strong></button>
+            </div>
+            <p class="muted small">1 lot = 100 oz, so $1 move × 0.10 lots = $10. Prices are bid; buys pay the spread.</p>
+        </section>
+
+        <section class="card position" id="positionCard" hidden>
+            <div class="pos-head">
+                <span class="side" id="posSide"></span>
+                <strong id="posPnl"></strong>
+            </div>
+            <div class="pos-rows" id="posRows"></div>
+            <div class="pos-actions">
+                <button class="btn small" id="beBtn" title="Move the stop loss to the entry price">SL to entry</button>
+                <button class="btn small" id="slToggleBtn"></button>
+                <button class="btn small" id="tpToggleBtn"></button>
+                <button class="btn small danger" id="closeBtn" title="Close at market (X)">Close</button>
+            </div>
+            <p class="muted small">Drag the SL / TP lines on the chart to move them.</p>
+        </section>
+
+        <section class="card">
+            <div class="stats" id="stats"></div>
+        </section>
+
+        <section class="card history">
+            <div class="history-head">
+                <h3>Trades</h3>
+                <div>
+                    <button class="btn small" id="exportBtn">Export CSV</button>
+                    <button class="btn small" id="resetBtn">Reset</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>#</th><th>Side</th><th>Entry</th><th>Exit</th><th>P&amp;L</th><th></th></tr></thead>
+                    <tbody id="tradeRows"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <p class="keys muted small">
+            <kbd>Space</kbd> play/pause · <kbd>→</kbd>/<kbd>←</kbd> step · <kbd>B</kbd> buy · <kbd>S</kbd> sell · <kbd>X</kbd> close ·
+            <kbd>H</kbd> line · <kbd>F</kbd> Fibonacci · <kbd>R</kbd> random · <kbd>A</kbd> Heikin Ashi · <kbd>1</kbd>–<kbd>7</kbd> timeframe · <kbd>Esc</kbd> cancel
+        </p>
+    </aside>
+</main>
+
+<div class="modal" id="fibModal" hidden>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="fibTitle">
+        <header>
+            <h2 id="fibTitle">Fib retracement</h2>
+            <button class="close" data-fib="cancel" aria-label="Close">×</button>
+        </header>
+        <div class="dialog-body" id="fibForm">
+            <div class="row">
+                <label class="check"><input type="checkbox" id="fsTrendOn"> Trend line</label>
+                <div class="ctrl">
+                    <input type="color" id="fsTrendColor" title="Trend line colour">
+                    <select id="fsTrendStyle" title="Trend line style"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select>
+                </div>
+            </div>
+            <div class="row">
+                <span>Levels line</span>
+                <div class="ctrl">
+                    <select id="fsLineStyle" title="Level line style"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select>
+                    <select id="fsLineWidth" title="Level line width"><option value="1">1px</option><option value="2">2px</option><option value="3">3px</option><option value="4">4px</option></select>
+                </div>
+            </div>
+            <div class="row">
+                <span>Extend</span>
+                <select id="fsExtend"><option value="none">Don’t extend</option><option value="right">Extend lines right</option><option value="left">Extend lines left</option><option value="both">Extend lines both ways</option></select>
+            </div>
+            <div class="levels-grid" id="fsLevels"></div>
+            <div class="row">
+                <span>Use one color</span>
+                <input type="color" id="fsOneColor" title="Set every level to this colour">
+            </div>
+            <div class="row">
+                <label class="check"><input type="checkbox" id="fsBgOn"> Background</label>
+                <input type="range" id="fsBgOpacity" min="0.02" max="0.5" step="0.01" title="Background opacity">
+            </div>
+            <div class="row"><label class="check"><input type="checkbox" id="fsReverse"> Reverse</label></div>
+            <div class="row"><label class="check"><input type="checkbox" id="fsPrices"> Prices</label></div>
+            <div class="row">
+                <label class="check"><input type="checkbox" id="fsShowLevels"> Levels</label>
+                <select id="fsLevelFormat"><option value="values">Values</option><option value="percents">Percents</option></select>
+            </div>
+            <div class="row">
+                <span>Labels</span>
+                <div class="ctrl">
+                    <select id="fsLabelH"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+                    <select id="fsLabelV"><option value="top">Top</option><option value="middle">Middle</option><option value="bottom">Bottom</option></select>
+                </div>
+            </div>
+        </div>
+        <footer>
+            <select id="fsTemplate" title="Replace the 24 levels with a preset">
+                <option value="">Template</option>
+            </select>
+            <button class="btn danger" id="fsDelete" title="Delete this Fibonacci drawing">Delete</button>
+            <span class="spacer"></span>
+            <button class="btn" data-fib="cancel">Cancel</button>
+            <button class="btn primary" data-fib="ok">Ok</button>
+        </footer>
+    </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="vendor/lightweight-charts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
